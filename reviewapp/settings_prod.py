@@ -59,11 +59,11 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    "http://127.0.0.1:3000",
-    "http://localhost:3000",
+    "http://35.200.161.71:3000",
+    # "http://localhost:3000",
 ]
 
-CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:3000']
+CSRF_TRUSTED_ORIGINS = ['http://35.200.161.71:3000']
 CORS_ALLOW_CREDENTIALS = True
 
 CSRF_COOKIE_SECURE = False
@@ -95,17 +95,17 @@ WSGI_APPLICATION = 'reviewapp.wsgi.application'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 DATABASES = {
-    # 'default': dj_database_url.config(
-    #     default=os.environ.get('DATABASE_URL')
-    # )
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'restaurants_data',
-        'USER': 'django',
-        'PASSWORD': 'appdev',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL')
+    )
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.postgresql',
+    #     'NAME': 'restaurants_data',
+    #     'USER': 'django',
+    #     'PASSWORD': 'appdev',
+    #     'HOST': 'localhost',
+    #     'PORT': '5432',
+    # }
 }
 
 AUTH_USER_MODEL = "accounts.User"
