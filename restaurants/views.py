@@ -1,43 +1,77 @@
 import datetime
 from django.shortcuts import render
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.permissions import AllowAny
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from rest_framework.authentication import BasicAuthentication, SessionAuthentication
 import json
+from geopy.distance import distance
+from django.core.paginator import Paginator, EmptyPage
 from utils.decorators import custom_auto_schema
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+from django.db.models import Q
 from .models import FoodItem, Restaurant, RestaurantReview
 from rest_framework.response import Response
 from rest_framework import status
     
 @api_view(['GET'])
-@custom_auto_schema(
-    operation_description="get all restaurants",
-    responses={200: 'OK'}
-)
+@authentication_classes([BasicAuthentication, SessionAuthentication])
+@permission_classes([AllowAny])
+@csrf_exempt
 def get_restaurants(request):
-    if request.method == 'GET':
-        restaurants = Restaurant.objects.all()
-        restaurant_data = [
-            {
-                'name': restaurant.name,
-                'address': restaurant.address,
-                'description': restaurant.description,
-                'contact_info': restaurant.contact_info,
-                'cafe':restaurant.cafe,
-                'bakery':restaurant.bakery,
-                'website': restaurant.website,
-                'location': restaurant.location,
-                'reviews': restaurant.reviews,
-                'tags': restaurant.tags,
-                'rating': restaurant.rating,
-                'opening_time': restaurant.opening_time.strftime('%H:%M') if restaurant.opening_time else None,
-                'closing_time': restaurant.closing_time.strftime('%H:%M') if restaurant.closing_time else None,
-            }
-            for restaurant in restaurants
-        ]
-        return JsonResponse({'restaurants': restaurant_data}, status=200)
-    else:
-        return JsonResponse({'error': 'Only GET requests are allowed'}, status=405)
+    page = request.GET.get('page', 1)
+    page_size = 10
+    sort_by = request.GET.get('sort_by', 'recommended')  # Default to 'recommended'
+
+    user_lat = float(request.GET.get('lat', 0))
+    user_lng = float(request.GET.get('lng', 0))
+
+    restaurants = Restaurant.objects.all()
+    
+    if sort_by == 'nearest' and user_lat and user_lng:
+        def calculate_distance(restaurant):
+            restaurant_lat, restaurant_lng = map(float, restaurant.location.split(','))
+            return distance((user_lat, user_lng), (restaurant_lat, restaurant_lng)).km
+
+        restaurants = sorted(restaurants, key=calculate_distance)
+    
+    elif sort_by == 'rating':
+        # Assuming 'rating' is a numeric field. If it's a string, you'll need to handle conversion.
+        restaurants = restaurants.order_by('-rating')
+
+    paginator = Paginator(restaurants, page_size)
+    
+    try:
+        page_obj = paginator.page(page)
+    except EmptyPage:
+        return JsonResponse({'error': 'Page not found'}, status=404)
+
+    restaurant_data = [
+        {
+            'name': restaurant.name,
+            'address': restaurant.address,
+            'description': restaurant.description,
+            'contact_info': restaurant.contact_info,
+            'cafe': restaurant.cafe,
+            'bakery': restaurant.bakery,
+            'website': restaurant.website,
+            'location': restaurant.location,
+            'reviews': restaurant.reviews,
+            'tags': restaurant.tags,
+            'rating': restaurant.rating,
+            'opening_time': restaurant.opening_time.strftime('%H:%M') if restaurant.opening_time else None,
+            'closing_time': restaurant.closing_time.strftime('%H:%M') if restaurant.closing_time else None,
+        }
+        for restaurant in page_obj.object_list
+    ]
+
+    return JsonResponse({
+        'restaurants': restaurant_data,
+        'total_pages': paginator.num_pages,
+        'current_page': page_obj.number,
+    }, status=200)
 
 @api_view(['POST'])
 @custom_auto_schema(
@@ -252,44 +286,129 @@ def get_bakeries(request):
 )
 def create_restaurantreview(request):
     if request.method == 'POST':
+        if not request.user.is_authenticated:
+            return Response({'error': 'User not authenticated'}, status=status.HTTP_401_UNAUTHORIZED)
+        
         data = request.data
-        restaurant_id = data.get('restaurant')
-        user_name = data.get('user_name')
-        food_quality_rating = data.get('food_quality_rating')
-        service_rating = data.get('service_rating')
-        ambiance_rating = data.get('ambiance_rating')
+        restaurant_name = data.get('restaurant_name')
+        rating = data.get('rating')
+        description = data.get('description', '')
 
-        if None in [restaurant_id, user_name, food_quality_rating, service_rating, ambiance_rating]:
+        if None in [restaurant_name, rating]:
             return Response({'error': 'Missing required fields'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             review = RestaurantReview.objects.create(
-                restaurant_id=restaurant_id,
-                user_name=user_name,
-                food_quality_rating=food_quality_rating,
-                service_rating=service_rating,
-                ambiance_rating=ambiance_rating
+                restaurant_name=restaurant_name,
+                user_name=request.user.name,
+                rating=rating,
+                description=description
             )
             return Response({'message': 'Review created successfully'}, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 @api_view(['GET'])
-@custom_auto_schema(
-    operation_description="get restaurant specific review",
-    responses={200: 'OK'}
+@swagger_auto_schema(
+    operation_description="Get reviews for a specific restaurant",
+    responses={
+        200: openapi.Response('Success', openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'reviews': openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            'user_name': openapi.Schema(type=openapi.TYPE_STRING),
+                            'rating': openapi.Schema(type=openapi.TYPE_INTEGER),
+                            'description': openapi.Schema(type=openapi.TYPE_STRING),
+                            'restaurant_name': openapi.Schema(type=openapi.TYPE_STRING),
+                            'created_at': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME)
+                        }
+                    )
+                )
+            }
+        )),
+        404: 'Not Found'
+    }
 )
-def restaurant_reviews(request, restaurant_id):
+def restaurant_reviews(request, restaurant_name):
     if request.method == 'GET':
-        reviews = RestaurantReview.objects.filter(restaurant_id=restaurant_id)
+        reviews = RestaurantReview.objects.filter(restaurant_name=restaurant_name).order_by('-created_at')[:10]
         review_data = [
             {
                 'user_name': review.user_name,
-                'food_quality_rating': review.food_quality_rating,
-                'service_rating': review.service_rating,
-                'ambiance_rating': review.ambiance_rating,
-                'created_at': review.created_at
+                'rating': review.rating,
+                'description': review.description,
+                'restaurant_name': review.restaurant_name,
+                'created_at': review.created_at.isoformat()
             }
             for review in reviews
         ]
         return Response({'reviews': review_data})
+
+@api_view(['GET'])
+@authentication_classes([BasicAuthentication, SessionAuthentication])
+@permission_classes([AllowAny])
+@csrf_exempt
+@custom_auto_schema(
+    operation_description="Restaurant list based on search",
+    responses={200: 'OK'}
+)
+def search_restaurants(request):
+    if request.method == 'GET':
+        search_term = request.GET.get('search', '')
+        if search_term:
+            businesses = Restaurant.objects.filter(
+                Q(name__icontains=search_term)
+            )
+        else:
+            businesses = Restaurant.objects.all()
+
+        businesses_list = list(businesses.values('restaurant_id','name', 'address'))
+        return Response(businesses_list)
+    
+@api_view(['GET'])
+@swagger_auto_schema(
+    operation_description="Get the latest reviews with pagination",
+    responses={
+        200: openapi.Response('Success', openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'reviews': openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            'restaurant_name': openapi.Schema(type=openapi.TYPE_STRING),
+                            'description': openapi.Schema(type=openapi.TYPE_STRING),
+                            'user_name': openapi.Schema(type=openapi.TYPE_STRING),
+                            'rating': openapi.Schema(type=openapi.TYPE_INTEGER),
+                            'created_at': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME)
+                        }
+                    )
+                )
+            }
+        )),
+        404: 'Not Found'
+    }
+)
+def recent_reviews(request):
+    page = int(request.GET.get('page', 1))
+    page_size = 12
+    start = (page - 1) * page_size
+    end = start + page_size
+    
+    reviews = RestaurantReview.objects.order_by('-created_at')[start:end]
+    review_data = [
+        {
+            'restaurant_name': review.restaurant_name,
+            'description': review.description,
+            'user_name': review.user_name,
+            'rating': review.rating,
+            'created_at': review.created_at
+        }
+        for review in reviews
+    ]
+    return Response({'reviews': review_data})

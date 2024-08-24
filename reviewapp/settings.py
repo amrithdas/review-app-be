@@ -58,12 +58,23 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',  # For token-based authentication
+        'rest_framework.authentication.SessionAuthentication',  # For session-based authentication
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'reviewapp.permissions.IsAuthenticatedOrReadOnlyForSwagger',
+        # 'rest_framework.permissions.IsAuthenticated',
+    ],
+}
+
 CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://localhost:3000",
 ]
 
-CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:3000']
+CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:3000', 'http://localhost:3000']
 CORS_ALLOW_CREDENTIALS = True
 
 CSRF_COOKIE_SECURE = False

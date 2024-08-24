@@ -29,12 +29,12 @@ class FoodItem(models.Model):
     def __str__(self):
         return self.name
     
+
 class RestaurantReview(models.Model):
-    restaurant = models.ForeignKey('Restaurant', on_delete=models.CASCADE)
+    restaurant_name = models.CharField(max_length=255, blank=True)
     user_name = models.CharField(max_length=100)
-    food_quality_rating = models.PositiveSmallIntegerField(choices=[(i, i) for i in range(1, 6)])
-    service_rating = models.PositiveSmallIntegerField(choices=[(i, i) for i in range(1, 6)])
-    ambiance_rating = models.PositiveSmallIntegerField(choices=[(i, i) for i in range(1, 6)])
+    rating = models.PositiveSmallIntegerField(choices=[(i, i) for i in range(1, 6)])
+    description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
