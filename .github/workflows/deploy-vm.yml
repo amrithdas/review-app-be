@@ -31,9 +31,6 @@ jobs:
       uses: webfactory/ssh-agent@v0.5.3
       with:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-      env:
-        SSH_ASKPASS: /bin/echo
-        SSH_PASSPHRASE: ${{ secrets.SSH_PASSPHRASE }}
 
     - name: Run deployment script on GCP VM
       run: |
