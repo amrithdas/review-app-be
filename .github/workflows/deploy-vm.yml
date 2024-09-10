@@ -1,0 +1,40 @@
+# This is a basic workflow that is manually triggered
+
+name: Deploy to GCP VM
+
+# Controls when the action will run. Workflow runs when manually triggered using the UI
+# or API.
+on:
+  workflow_dispatch:
+    # Inputs the workflow accepts.
+    inputs:
+      name:
+        # Friendly description to be shown in the UI instead of 'name'
+        description: 'Deployment pipeline'
+        # Default value if no value is explicitly provided
+        # default: 'World'
+        # Input has to be provided for the workflow to run
+        # required: false
+        # The data type of the input
+        # type: string
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up SSH for GCP VM
+      uses: webfactory/ssh-agent@v0.5.3
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Run deployment script on GCP VM
+      run: |
+        ssh -o StrictHostKeyChecking=no amrithdaz@34.100.209.240 << 'EOF'
+          cd /home/amrithdaz/
+          sudo ./deploy.sh
+        EOF
