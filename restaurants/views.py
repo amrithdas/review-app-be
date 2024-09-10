@@ -412,3 +412,77 @@ def recent_reviews(request):
         for review in reviews
     ]
     return Response({'reviews': review_data})
+
+@api_view(['GET'])
+@swagger_auto_schema(
+    operation_description="Get details of a specific restaurant",
+    responses={
+        200: openapi.Response('Success', openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'restaurant': openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'restaurant_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'name': openapi.Schema(type=openapi.TYPE_STRING),
+                        'address': openapi.Schema(type=openapi.TYPE_STRING),
+                        'description': openapi.Schema(type=openapi.TYPE_STRING),
+                        'contact_info': openapi.Schema(type=openapi.TYPE_STRING),
+                        'website': openapi.Schema(type=openapi.TYPE_STRING),
+                        'location': openapi.Schema(type=openapi.TYPE_STRING),
+                        'rating': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'bakery': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'cafe': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'closing_time': openapi.Schema(type=openapi.TYPE_STRING),
+                        'opening_time': openapi.Schema(type=openapi.TYPE_STRING),
+                        'reviews': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_STRING)),
+                        'tags': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_STRING)),
+                    }
+                )
+            }
+        )),
+        404: 'Not Found'
+    }
+)
+def restaurant_details(request, restaurant_name):
+    try:
+        restaurant = Restaurant.objects.get(name=restaurant_name)
+        restaurant_data = {
+            'restaurant_id': restaurant.restaurant_id,
+            'name': restaurant.name,
+            'address': restaurant.address,
+            'description': restaurant.description,
+            'contact_info': restaurant.contact_info,
+            'website': restaurant.website,
+            'location': restaurant.location,
+            'rating': restaurant.rating,
+            'bakery': restaurant.bakery,
+            'cafe': restaurant.cafe,
+            'closing_time': restaurant.closing_time,
+            'opening_time': restaurant.opening_time,
+            'reviews': restaurant.reviews,
+            'tags': restaurant.tags,
+        }
+        return Response({'restaurant': restaurant_data}, status=200)
+    except Restaurant.DoesNotExist:
+        return Response({'error': 'Restaurant not found'}, status=404)
+    
+@api_view(['GET'])
+@swagger_auto_schema(
+    operation_description="Get count of reviews for a specific restaurant",
+    responses={
+        200: openapi.Response('Success', openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'review_count': openapi.Schema(type=openapi.TYPE_INTEGER, description="Total number of reviews for the restaurant")
+            }
+        )),
+        404: 'Not Found'
+    }
+)
+def review_count(request, restaurant_name):
+    try:
+        review_count = RestaurantReview.objects.filter(restaurant_name=restaurant_name).count()
+        return Response({'review_count': review_count}, status=status.HTTP_200_OK)
+    except RestaurantReview.DoesNotExist:
+        return Response({'error': 'Restaurant not found'}, status=status.HTTP_404_NOT_FOUND)

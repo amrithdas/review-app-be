@@ -14,4 +14,6 @@ urlpatterns = [
     path('api/restaurants/<str:restaurant_name>/reviews/', views.restaurant_reviews, name='restaurant_reviews'),
     path('api/restaurants/list', views.search_restaurants, name='search_businesses'),
     path('api/recent-reviews/', views.recent_reviews, name='recent-reviews'),
+    path('api/restaurant/<str:restaurant_name>/', views.restaurant_details, name='restaurant-details'),
+    path('api/<str:restaurant_name>/review_count/', views.review_count, name='review_count'),
 ]
