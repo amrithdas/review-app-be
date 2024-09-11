@@ -38,3 +38,10 @@ jobs:
           cd /home/amrithdaz/
           sudo ./deploy.sh
         EOF
+        
+    - name: Run docker cleanup script on GCP VM
+      run: |
+        ssh -o StrictHostKeyChecking=no amrithdaz@34.47.150.171 << 'EOF'
+          cd /home/amrithdaz/
+          sudo ./cleanup.sh
+        EOF
