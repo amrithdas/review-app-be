@@ -38,9 +38,9 @@ schema_view = get_schema_view(
 urlpatterns = [
     path('', include('home.urls')),
     path('admin/', admin.site.urls),
-    path('restaurants/', include('restaurants.urls')),
-    path('accounts/', include('accounts.urls')),
-    path('reviews/',include('reviews.urls')),
+    path('apis/restaurants/', include('restaurants.urls')),
+    path('apis/accounts/', include('accounts.urls')),
+    path('apis/reviews/',include('reviews.urls')),
     path('api/', include(router.urls)),
     # path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     # path('api/token/', obtain_auth_token, name='token_obtain_pair'),
