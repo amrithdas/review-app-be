@@ -25,9 +25,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-06(ocec!gc!t$a!$=@fdn88jidm@%lr^ux1_8%notg5kq2w9_)'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ['34.100.209.240']
+ALLOWED_HOSTS = ['piktio.com', 'www.piktio.com',]
 
 
 # Application definition
@@ -59,18 +59,30 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    # "http://35.200.161.71:3000",
-    "http://34.100.209.240:3000",
+    'https://piktio.com', 
+    'https://www.piktio.com',
 ]
 
-CSRF_TRUSTED_ORIGINS = ['http://34.100.209.240:3000']
+CSRF_TRUSTED_ORIGINS = [
+    'https://piktio.com', 
+    'https://www.piktio.com',
+]
 CORS_ALLOW_CREDENTIALS = True
 
-CSRF_COOKIE_SECURE = False
+# CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_HTTPONLY = False
 CSRF_USE_SESSIONS = False
 
 ROOT_URLCONF = 'reviewapp.urls'
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
+SECURE_HSTS_SECONDS = 31536000  # 1 year
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
 
 TEMPLATES = [
     {
