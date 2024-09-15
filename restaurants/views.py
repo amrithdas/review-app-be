@@ -6,7 +6,10 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.authentication import BasicAuthentication, SessionAuthentication
 import json
+from django.db.models import Count
+from .serializers import RestaurantReviewSerializer
 from geopy.distance import distance
+from rest_framework.pagination import PageNumberPagination
 from django.core.paginator import Paginator, EmptyPage
 from utils.decorators import custom_auto_schema
 from drf_yasg.utils import swagger_auto_schema
@@ -63,6 +66,7 @@ def get_restaurants(request):
             'rating': restaurant.rating,
             'opening_time': restaurant.opening_time.strftime('%H:%M') if restaurant.opening_time else None,
             'closing_time': restaurant.closing_time.strftime('%H:%M') if restaurant.closing_time else None,
+            'image_urls': restaurant.image_urls,
         }
         for restaurant in page_obj.object_list
     ]
@@ -437,6 +441,7 @@ def recent_reviews(request):
                         'opening_time': openapi.Schema(type=openapi.TYPE_STRING),
                         'reviews': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_STRING)),
                         'tags': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_STRING)),
+                        'image_urls': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_STRING)),
                     }
                 )
             }
@@ -462,6 +467,7 @@ def restaurant_details(request, restaurant_name):
             'opening_time': restaurant.opening_time,
             'reviews': restaurant.reviews,
             'tags': restaurant.tags,
+            'image_urls': restaurant.image_urls,
         }
         return Response({'restaurant': restaurant_data}, status=200)
     except Restaurant.DoesNotExist:
@@ -484,5 +490,34 @@ def review_count(request, restaurant_name):
     try:
         review_count = RestaurantReview.objects.filter(restaurant_name=restaurant_name).count()
         return Response({'review_count': review_count}, status=status.HTTP_200_OK)
+    except RestaurantReview.DoesNotExist:
+        return Response({'error': 'Restaurant not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['GET'])
+def rating_counts(request, restaurant_name):
+    # Fetch rating counts for the given restaurant
+    rating_counts = RestaurantReview.objects.filter(restaurant_name=restaurant_name).values('rating').annotate(count=Count('rating')).order_by('rating')
+
+    # Create a dictionary to hold the counts
+    counts_dict = {i: 0 for i in range(1, 6)}
+    for entry in rating_counts:
+        counts_dict[entry['rating']] = entry['count']
+
+    return JsonResponse(counts_dict)
+
+class ReviewPagination(PageNumberPagination):
+    page_size = 5
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+    
+@api_view(['GET'])
+def recent_reviews_by_restaurant(request, restaurant_name):
+    try:
+        reviews = RestaurantReview.objects.filter(restaurant_name=restaurant_name).order_by('-created_at')
+        paginator = ReviewPagination()
+        result_page = paginator.paginate_queryset(reviews, request)
+        serializer = RestaurantReviewSerializer(result_page, many=True)
+        return paginator.get_paginated_response(serializer.data)
     except RestaurantReview.DoesNotExist:
         return Response({'error': 'Restaurant not found'}, status=status.HTTP_404_NOT_FOUND)

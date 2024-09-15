@@ -1,4 +1,6 @@
+from audioop import avg
 from django.db import models
+from django.db.models import Avg
 from django.contrib.postgres.fields import ArrayField
 
 class Restaurant(models.Model):
@@ -16,6 +18,18 @@ class Restaurant(models.Model):
     tags = ArrayField(models.CharField(max_length=50), blank=True, default=list)
     opening_time = models.TimeField(blank=True, null=True)
     closing_time = models.TimeField(blank=True, null=True)
+    image_urls = ArrayField(models.URLField(), blank=True, default=list)
+
+    def save(self, *args, **kwargs):
+        # Calculate the average rating
+        reviews = RestaurantReview.objects.filter(restaurant_name=self.name)
+        if reviews.exists():
+            average_rating = reviews.aggregate(average_rating=Avg('rating'))['average_rating']
+            self.rating = average_rating
+        else:
+            self.rating = None
+        
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
