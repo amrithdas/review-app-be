@@ -18,4 +18,7 @@ urlpatterns = [
     path('api/<str:restaurant_name>/review_count/', views.review_count, name='review_count'),
     path('api/get-rating-counts/<str:restaurant_name>/', views.rating_counts, name='review_count'),
     path('api/recent-reviews/<str:restaurant_name>/', views.recent_reviews_by_restaurant, name='restaurant-reviews'),
+    path('api/get-tags/', views.get_distinct_tags, name='tags'),
+    path('api/get-reviews/', views.get_user_reviews_count, name='get review-count'),
+    path('api/get-user-reviews/', views.get_user_reviews, name='get review-count'),
 ]

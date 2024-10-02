@@ -1,14 +1,18 @@
 import json
+import requests
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, get_user_model
 from django.urls import reverse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from .forms import SignUpForm, LoginForm
 from django.middleware.csrf import get_token
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 @ensure_csrf_cookie
 def get_csrf(request):
@@ -72,3 +76,40 @@ def user_logout(request):
     response = JsonResponse({'message': 'Logged out successfully'}, status=200)
     response.delete_cookie('sessionid')  # Ensure sessionid cookie is deleted
     return response
+
+@csrf_exempt
+def google_login(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        id_token = data.get('id_token')
+
+        # Verify the ID token
+        response = requests.get(f'https://oauth2.googleapis.com/tokeninfo?id_token={id_token}')
+        if response.status_code != 200:
+            return JsonResponse({'error': 'Invalid token'}, status=401)
+
+        user_info = response.json()
+        email = user_info.get('email')
+        
+        User = get_user_model()
+
+        # Here, change the 'username' to 'email' to match your USERNAME_FIELD
+        user, created = User.objects.get_or_create(email=email, defaults={'name': user_info.get('name')})
+
+        # Log the user in
+        login(request, user)
+        
+        return JsonResponse({'Success': 'Logged In'}, status=200)
+    
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_profile(request):
+    user = request.user
+    data = {
+        'name': user.name,
+        'pincode': user.pincode,
+        'bio': user.bio,
+    }
+    return Response(data)

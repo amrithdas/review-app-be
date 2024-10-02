@@ -1,6 +1,7 @@
 import datetime
 from django.shortcuts import render
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from django.contrib.auth.decorators import login_required
 from rest_framework.permissions import AllowAny
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -15,6 +16,7 @@ from utils.decorators import custom_auto_schema
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from django.db.models import Q
+from django.db import connection
 from .models import FoodItem, Restaurant, RestaurantReview
 from rest_framework.response import Response
 from rest_framework import status
@@ -496,10 +498,8 @@ def review_count(request, restaurant_name):
 
 @api_view(['GET'])
 def rating_counts(request, restaurant_name):
-    # Fetch rating counts for the given restaurant
     rating_counts = RestaurantReview.objects.filter(restaurant_name=restaurant_name).values('rating').annotate(count=Count('rating')).order_by('rating')
 
-    # Create a dictionary to hold the counts
     counts_dict = {i: 0 for i in range(1, 6)}
     for entry in rating_counts:
         counts_dict[entry['rating']] = entry['count']
@@ -521,3 +521,37 @@ def recent_reviews_by_restaurant(request, restaurant_name):
         return paginator.get_paginated_response(serializer.data)
     except RestaurantReview.DoesNotExist:
         return Response({'error': 'Restaurant not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+@api_view(['GET'])
+def get_distinct_tags(request):
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT DISTINCT ON (LOWER(unnested_tag)) unnested_tag
+                FROM (
+                    SELECT UNNEST(tags) AS unnested_tag
+                    FROM public.restaurants_restaurant
+                ) AS subquery
+                ORDER BY LOWER(unnested_tag), unnested_tag;
+            """)
+            tags = cursor.fetchall()
+        
+        distinct_tags = [tag[0] for tag in tags]
+
+        return Response({'distinct_tags': distinct_tags}, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+def get_user_reviews_count(request):
+    user = request.user
+    review_count = RestaurantReview.objects.filter(user_name=user).count()
+    return Response({'review_count': review_count})
+
+@login_required
+@api_view(['GET'])
+def get_user_reviews(request):
+    user_reviews = RestaurantReview.objects.filter(user_name=request.user)
+    serializer = RestaurantReviewSerializer(user_reviews, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)

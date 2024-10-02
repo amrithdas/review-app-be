@@ -43,11 +43,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True, blank=True, null=True)
     is_staff = models.BooleanField(default=False)
     mobile_number = models.CharField(max_length=15, unique=True, blank=True, null=True)
-    birthday = models.DateField(blank=True, null=True)  # New field for birthday
-    pincode = models.CharField(max_length=10, blank=True, null=True) 
+    birthday = models.DateField(blank=True, null=True)
+    pincode = models.CharField(max_length=10, blank=True, null=True)
+    bio = models.TextField(blank=True, null=True)
 
-    USERNAME_FIELD = 'email'  # Use email as the default username field
-    REQUIRED_FIELDS = ['name']  # Require name when creating users
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['name']
 
     objects = CustomUserManager()
     pass
