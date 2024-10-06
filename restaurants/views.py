@@ -28,22 +28,27 @@ from rest_framework import status
 def get_restaurants(request):
     page = request.GET.get('page', 1)
     page_size = 10
-    sort_by = request.GET.get('sort_by', 'recommended')  # Default to 'recommended'
-
+    sort_by = request.GET.get('sort_by', 'recommended')
     user_lat = float(request.GET.get('lat', 0))
     user_lng = float(request.GET.get('lng', 0))
-
+    
+    categories = request.GET.get('category', '')
+    categories_list = categories.split(",") if categories else []
+    
     restaurants = Restaurant.objects.all()
+    
+    if categories_list:
+        query = Q()
+        for category in categories_list:
+            query |= Q(tags__icontains=category)
+        restaurants = restaurants.filter(query)
     
     if sort_by == 'nearest' and user_lat and user_lng:
         def calculate_distance(restaurant):
             restaurant_lat, restaurant_lng = map(float, restaurant.location.split(','))
             return distance((user_lat, user_lng), (restaurant_lat, restaurant_lng)).km
-
         restaurants = sorted(restaurants, key=calculate_distance)
-    
     elif sort_by == 'rating':
-        # Assuming 'rating' is a numeric field. If it's a string, you'll need to handle conversion.
         restaurants = restaurants.order_by('-rating')
 
     paginator = Paginator(restaurants, page_size)
