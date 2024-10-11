@@ -1,5 +1,5 @@
 import datetime
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from django.contrib.auth.decorators import login_required
 from rest_framework.permissions import AllowAny
@@ -8,6 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework.authentication import BasicAuthentication, SessionAuthentication
 import json
 from django.db.models import Count
+
 from .serializers import RestaurantReviewSerializer
 from geopy.distance import distance
 from rest_framework.pagination import PageNumberPagination
@@ -20,6 +21,7 @@ from django.db import connection
 from .models import FoodItem, Restaurant, RestaurantReview
 from rest_framework.response import Response
 from rest_framework import status
+from django.utils import timezone
     
 @api_view(['GET'])
 @authentication_classes([BasicAuthentication, SessionAuthentication])
@@ -557,6 +559,21 @@ def get_user_reviews_count(request):
 @login_required
 @api_view(['GET'])
 def get_user_reviews(request):
-    user_reviews = RestaurantReview.objects.filter(user_name=request.user)
+    user_reviews = RestaurantReview.objects.filter(user_name=request.user).order_by('-id')
     serializer = RestaurantReviewSerializer(user_reviews, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+@login_required
+@api_view(['PUT', 'DELETE'])
+def reviews_edit(request, id):
+    review = get_object_or_404(RestaurantReview, id=id, user_name=request.user)
+
+    if request.method == 'PUT':
+        new_content = request.data.get('content', '')
+        review.description = new_content
+        review.save()
+        return Response({'message': 'Review updated successfully'}, status=status.HTTP_200_OK)
+
+    elif request.method == 'DELETE':
+        review.delete()
+        return Response({'message': 'Review deleted successfully'}, status=status.HTTP_204_NO_CONTENT)

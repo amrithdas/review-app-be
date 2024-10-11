@@ -103,13 +103,21 @@ def google_login(request):
     
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
-@api_view(['GET'])
+@api_view(['GET', 'PUT'])
 @permission_classes([IsAuthenticated])
 def get_user_profile(request):
     user = request.user
-    data = {
-        'name': user.name,
-        'pincode': user.pincode,
-        'bio': user.bio,
-    }
-    return Response(data)
+
+    if request.method == 'GET':
+        data = {
+            'name': user.name,
+            'pincode': user.pincode,
+            'bio': user.bio,
+        }
+        return Response(data)
+
+    elif request.method == 'PUT':
+        bio = request.data.get('bio', '')
+        user.bio = bio
+        user.save()
+        return JsonResponse({'message': 'Bio updated successfully'}, status=200)
