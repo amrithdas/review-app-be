@@ -66,8 +66,6 @@ def get_restaurants(request):
             'address': restaurant.address,
             'description': restaurant.description,
             'contact_info': restaurant.contact_info,
-            'cafe': restaurant.cafe,
-            'bakery': restaurant.bakery,
             'website': restaurant.website,
             'location': restaurant.location,
             'reviews': restaurant.reviews,
@@ -99,8 +97,6 @@ def create_restaurant(request):
         address = data.get('address')
         description = data.get('description')
         contact_info = data.get('contact_info')
-        cafe = data.get('cafe')
-        bakery = data.get('bakery')
         website = data.get('website')
         location = data.get('location')
         rating = data.get('rating')
@@ -112,8 +108,6 @@ def create_restaurant(request):
             address=address,
             description=description,
             contact_info=contact_info,
-            cafe=cafe,
-            bakery=bakery,
             website=website,
             location=location,
             rating=rating,
@@ -154,7 +148,7 @@ def get_fooditems(request):
 def open_restaurants(request):
     if request.method == 'GET':
         current_time = datetime.now().time()
-        open_restaurants = Restaurant.objects.filter(opening_time__lte=current_time, closing_time__gt=current_time, cafe=False, bakery=False)
+        open_restaurants = Restaurant.objects.filter(opening_time__lte=current_time, closing_time__gt=current_time)
         restaurant_data = [
             {
                 'id': restaurant.restaurant_id,
@@ -163,8 +157,6 @@ def open_restaurants(request):
                 'description': restaurant.description,
                 'contact_info': restaurant.contact_info,
                 'website': restaurant.website,
-                'cafe': restaurant.cafe,
-                'bakery': restaurant.bakery,
                 'location': restaurant.location,
                 'rating': restaurant.rating,
                 'opening_time': restaurant.opening_time.strftime('%H:%M') if restaurant.opening_time else None,
@@ -192,8 +184,6 @@ def veg_restaurants(request):
                 'description': restaurant.description,
                 'contact_info': restaurant.contact_info,
                 'website': restaurant.website,
-                'cafe': restaurant.cafe,
-                'bakery': restaurant.bakery,
                 'location': restaurant.location,
                 'rating': restaurant.rating,
                 'opening_time': restaurant.opening_time.strftime('%H:%M') if restaurant.opening_time else None,
@@ -221,8 +211,6 @@ def nonveg_restaurants(request):
                 'description': restaurant.description,
                 'contact_info': restaurant.contact_info,
                 'website': restaurant.website,
-                'cafe': restaurant.cafe,
-                'bakery': restaurant.bakery,
                 'location': restaurant.location,
                 'rating': restaurant.rating,
                 'opening_time': restaurant.opening_time.strftime('%H:%M') if restaurant.opening_time else None,
@@ -231,64 +219,6 @@ def nonveg_restaurants(request):
             for restaurant in nonveg_restaurants
         ]
         return JsonResponse({'restaurants': restaurant_data}, status=200)
-    else:
-        return JsonResponse({'error': 'Only GET requests are allowed'}, status=405)
-    
-@api_view(['GET'])
-@custom_auto_schema(
-    operation_description="get all cafes",
-    responses={200: 'OK'}
-)
-def get_cafes(request):
-    if request.method == 'GET':
-        cafes = Restaurant.objects.filter(cafe=True)
-        restaurant_data = [
-            {
-                'id': restaurant.restaurant_id,
-                'name': restaurant.name,
-                'address': restaurant.address,
-                'description': restaurant.description,
-                'contact_info': restaurant.contact_info,
-                'website': restaurant.website,
-                'cafe': restaurant.cafe,
-                'bakery': restaurant.bakery,
-                'location': restaurant.location,
-                'rating': restaurant.rating,
-                'opening_time': restaurant.opening_time.strftime('%H:%M') if restaurant.opening_time else None,
-                'closing_time': restaurant.closing_time.strftime('%H:%M') if restaurant.closing_time else None
-            }
-            for restaurant in cafes
-        ]
-        return JsonResponse({'cafes': restaurant_data}, status=200)
-    else:
-        return JsonResponse({'error': 'Only GET requests are allowed'}, status=405)
-    
-@api_view(['GET'])
-@custom_auto_schema(
-    operation_description="get all bakeries",
-    responses={200: 'OK'}
-)
-def get_bakeries(request):
-    if request.method == 'GET':
-        bakeries = Restaurant.objects.filter(bakery=True)
-        restaurant_data = [
-            {
-                'id': restaurant.restaurant_id,
-                'name': restaurant.name,
-                'address': restaurant.address,
-                'description': restaurant.description,
-                'contact_info': restaurant.contact_info,
-                'website': restaurant.website,
-                'cafe': restaurant.cafe,
-                'bakery': restaurant.bakery,
-                'location': restaurant.location,
-                'rating': restaurant.rating,
-                'opening_time': restaurant.opening_time.strftime('%H:%M') if restaurant.opening_time else None,
-                'closing_time': restaurant.closing_time.strftime('%H:%M') if restaurant.closing_time else None
-            }
-            for restaurant in bakeries
-        ]
-        return JsonResponse({'cafes': restaurant_data}, status=200)
     else:
         return JsonResponse({'error': 'Only GET requests are allowed'}, status=405)
     
@@ -444,8 +374,6 @@ def recent_reviews(request):
                         'website': openapi.Schema(type=openapi.TYPE_STRING),
                         'location': openapi.Schema(type=openapi.TYPE_STRING),
                         'rating': openapi.Schema(type=openapi.TYPE_INTEGER),
-                        'bakery': openapi.Schema(type=openapi.TYPE_BOOLEAN),
-                        'cafe': openapi.Schema(type=openapi.TYPE_BOOLEAN),
                         'closing_time': openapi.Schema(type=openapi.TYPE_STRING),
                         'opening_time': openapi.Schema(type=openapi.TYPE_STRING),
                         'reviews': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_STRING)),
@@ -470,8 +398,6 @@ def restaurant_details(request, restaurant_name):
             'website': restaurant.website,
             'location': restaurant.location,
             'rating': restaurant.rating,
-            'bakery': restaurant.bakery,
-            'cafe': restaurant.cafe,
             'closing_time': restaurant.closing_time,
             'opening_time': restaurant.opening_time,
             'reviews': restaurant.reviews,
